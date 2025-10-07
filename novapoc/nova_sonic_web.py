@@ -5,11 +5,16 @@ import datetime
 import ipaddress
 import json
 from pathlib import Path
+import sys
 from typing import Any, Dict, Optional, Tuple
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from starlette.websockets import WebSocketState
+
+BASE_DIR = Path(__file__).resolve().parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 
 try:  # Allow running as module or standalone script
     from .nova_sonic_full import BedrockStreamManager
@@ -18,7 +23,6 @@ except ImportError:  # pragma: no cover - fallback when executed directly
 
 app = FastAPI()
 
-BASE_DIR = Path(__file__).resolve().parent
 FRONTEND_PATH = BASE_DIR / "web" / "index.html"
 
 
