@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nova Sonic Web</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        body {
+            margin: 0;
+            background: radial-gradient(circle at top, #2a3f6d 0%, #101929 45%, #05070c 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #f5f7ff;
+        }
+        main {
+            width: min(900px, 94vw);
+            background: rgba(9, 17, 31, 0.86);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 18px;
+            padding: 28px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(12px);
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        h1 {
+            font-size: 1.6rem;
+            margin: 0;
+            letter-spacing: 0.04em;
+        }
+        #status {
+            font-size: 0.95rem;
+            opacity: 0.9;
+        }
+        .controls {
+            margin: 24px 0 12px 0;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        button {
+            border: none;
+            border-radius: 999px;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+            color: #0f172a;
+        }
+        button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        #startBtn {
+            background: linear-gradient(135deg, #62f7d2, #45b1ff);
+            box-shadow: 0 10px 25px rgba(68, 199, 255, 0.35);
+        }
+        #stopBtn {
+            background: linear-gradient(135deg, #ff6b6b, #f06595);
+            color: white;
+        }
+        button:not(:disabled):hover {
+            transform: translateY(-2px);
+        }
+        #conversation {
+            margin-top: 18px;
+            max-height: 420px;
+            overflow-y: auto;
+            padding-right: 6px;
+        }
+        .msg {
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            line-height: 1.45;
+            white-space: pre-wrap;
+        }
+        .msg.assistant {
+            background: rgba(78, 168, 255, 0.18);
+            border-color: rgba(100, 194, 255, 0.25);
+        }
+        .msg.user {
+            background: rgba(98, 247, 210, 0.16);
+            border-color: rgba(98, 247, 210, 0.25);
+        }
+        .msg.tool {
+            font-size: 0.95rem;
+            font-style: italic;
+            opacity: 0.9;
+        }
+        #logArea {
+            margin-top: 22px;
+            font-size: 0.85rem;
+            opacity: 0.75;
+            max-height: 160px;
+            overflow-y: auto;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding-top: 12px;
+        }
+        .log-entry {
+            margin-bottom: 6px;
+        }
+        a {
+            color: inherit;
+        }
+    </style>
+</head>
+<body>
+<main>
+    <header>
+        <h1>Nova Sonic Web</h1>
+        <div id="status">Conecta tu micrófono para iniciar.</div>
+    </header>
+
+    <div class="controls">
+        <button id="startBtn">Iniciar conversación</button>
+        <button id="stopBtn" disabled>Detener</button>
+    </div>
+
+    <section id="conversation"></section>
+    <section id="logArea"></section>
+</main>
+
+<script>
+(() => {
+    const WS_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`;
+    const TARGET_SAMPLE_RATE = 16000;
+    const MODEL_OUTPUT_SAMPLE_RATE = 24000;
+
+    let websocket;
+    let audioContext;
+    let mediaStream;
+    let sourceNode;
+    let processorNode;
+    let silentGainNode;
+    let sendingAudio = false;
+    let sessionReady = false;
+    let sessionReadyPromise = Promise.resolve();
+    let audioPlaybackTime = 0;
+
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const statusEl = document.getElementById('status');
+    const conversationEl = document.getElementById('conversation');
+    const logArea = document.getElementById('logArea');
+
+    const log = (message) => {
+        const div = document.createElement('div');
+        div.className = 'log-entry';
+        div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        logArea.appendChild(div);
+        logArea.scrollTop = logArea.scrollHeight;
+    };
+
+    if (!window.isSecureContext && !['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+        log('Aviso: la captura de micrófono requiere que abras la página mediante HTTPS o desde localhost.');
+    }
+
+    const appendMessage = (role, text, options = {}) => {
+        if (text === undefined || text === null) return;
+        const { allowHTML = false } = options;
+        const div = document.createElement('div');
+        div.className = `msg ${role}`;
+        let roleLabel = 'Sistema';
+        if (role === 'assistant') roleLabel = 'Asistente';
+        else if (role === 'user') roleLabel = 'Usuario';
+        else if (role === 'tool') roleLabel = 'Herramienta';
+
+        const strong = document.createElement('strong');
+        strong.textContent = `${roleLabel}: `;
+        div.appendChild(strong);
+
+        const contentSpan = document.createElement('span');
+        if (allowHTML) {
+            contentSpan.innerHTML = text;
+        } else if (typeof text === 'string') {
+            contentSpan.textContent = text;
+        } else {
+            contentSpan.textContent = JSON.stringify(text, null, 2);
+        }
+
+        div.appendChild(contentSpan);
+        conversationEl.appendChild(div);
+        conversationEl.scrollTop = conversationEl.scrollHeight;
+    };
+
+    const ensureWebsocket = () => {
+        if (websocket) {
+            if (websocket.readyState === WebSocket.OPEN) {
+                return sessionReady ? Promise.resolve() : sessionReadyPromise;
+            }
+            if (websocket.readyState === WebSocket.CONNECTING) {
+                return sessionReadyPromise;
+            }
+        }
+
+        sessionReady = false;
+        sessionReadyPromise = new Promise((resolve, reject) => {
+            websocket = new WebSocket(WS_URL);
+            websocket.binaryType = 'arraybuffer';
+
+            websocket.onopen = () => {
+                statusEl.textContent = 'Sesión conectada. Preparando modelo...';
+                log('Conexión websocket abierta');
+            };
+
+            websocket.onerror = (err) => {
+                const description = err?.message || 'desconocido';
+                log(`Error de websocket: ${description}`);
+                reject(err);
+            };
+
+            websocket.onclose = () => {
+                if (!sessionReady) {
+                    reject(new Error('La sesión se cerró antes de estar lista.'));
+                }
+                log('Conexión websocket cerrada');
+                statusEl.textContent = 'Sesión finalizada';
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                sendingAudio = false;
+                sessionReady = false;
+                websocket = null;
+                sessionReadyPromise = Promise.resolve();
+            };
+
+            websocket.onmessage = (event) => {
+                try {
+                    const payload = JSON.parse(event.data);
+                    if (payload.type === 'session_ready') {
+                        sessionReady = true;
+                        statusEl.textContent = 'Modelo listo. Presiona "Iniciar conversación" para hablar.';
+                        resolve();
+                        sessionReadyPromise = Promise.resolve();
+                        return;
+                    }
+                    handleServerPayload(payload);
+                } catch (error) {
+                    log(`No se pudo interpretar mensaje del servidor: ${error}`);
+                }
+            };
+        });
+
+        return sessionReadyPromise;
+    };
+
+    const legacyGetUserMedia = () => {
+        const fn = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+        if (!fn) {
+            return null;
+        }
+        return (constraints) => new Promise((resolve, reject) => fn.call(navigator, constraints, resolve, reject));
+    };
+
+    const requestMicrophoneStream = async () => {
+        if (navigator.mediaDevices?.getUserMedia) {
+            return navigator.mediaDevices.getUserMedia({ audio: true });
+        }
+
+        const fallback = legacyGetUserMedia();
+        if (fallback) {
+            return fallback({ audio: true });
+        }
+
+        const reason = window.isSecureContext
+            ? 'Tu navegador no soporta la API getUserMedia. Actualiza a una versión más reciente.'
+            : 'El navegador bloqueó el micrófono porque la página no se abrió mediante HTTPS ni desde localhost.';
+        throw new Error(reason);
+    };
+
+    const handleServerPayload = (payload) => {
+        const event = payload.event;
+        if (!event) {
+            if (payload.raw_data) {
+                log(`Evento bruto: ${payload.raw_data}`);
+            }
+            return;
+        }
+
+        if (event.textOutput) {
+            const { content, role } = event.textOutput;
+            appendMessage(role?.toLowerCase?.() || 'assistant', content);
+        } else if (event.audioOutput) {
+            playAudioChunk(event.audioOutput.content);
+        } else if (event.toolUse) {
+            const { toolName, toolUseId } = event.toolUse;
+            appendMessage('tool', `Llamando herramienta <code>${toolName}</code> (ID: ${toolUseId})`, { allowHTML: true });
+        } else if (event.toolResult) {
+            const { contentName, content } = event.toolResult;
+            const resultText = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+            appendMessage('tool', `Resultado herramienta ${contentName}: ${resultText}`);
+        } else if (event.usageEvent) {
+            log(`Uso del modelo: ${JSON.stringify(event.usageEvent)}`);
+        } else if (event.error) {
+            log(`Error del servidor: ${event.error}`);
+        }
+    };
+
+    const playAudioChunk = (base64Chunk) => {
+        if (!audioContext) return;
+        const buffer = base64ToArrayBuffer(base64Chunk);
+        const frameCount = buffer.byteLength / 2;
+        const audioBuffer = audioContext.createBuffer(1, frameCount, MODEL_OUTPUT_SAMPLE_RATE);
+        const channelData = audioBuffer.getChannelData(0);
+        const view = new DataView(buffer);
+
+        for (let i = 0; i < frameCount; i++) {
+            channelData[i] = view.getInt16(i * 2, true) / 32768;
+        }
+
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContext.destination);
+
+        const now = audioContext.currentTime;
+        if (audioPlaybackTime < now) {
+            audioPlaybackTime = now;
+        }
+        source.start(audioPlaybackTime);
+        audioPlaybackTime += audioBuffer.duration;
+    };
+
+    const base64ToArrayBuffer = (base64) => {
+        const binary = atob(base64);
+        const len = binary.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes.buffer;
+    };
+
+    const floatTo16BitPCM = (input) => {
+        const output = new DataView(new ArrayBuffer(input.length * 2));
+        for (let i = 0; i < input.length; i++) {
+            let s = Math.max(-1, Math.min(1, input[i]));
+            output.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        }
+        return output;
+    };
+
+    const downsampleBuffer = (buffer, sampleRate, outSampleRate) => {
+        if (outSampleRate === sampleRate) {
+            return buffer;
+        }
+        const sampleRateRatio = sampleRate / outSampleRate;
+        const newLength = Math.round(buffer.length / sampleRateRatio);
+        const result = new Float32Array(newLength);
+        let offsetResult = 0;
+        let offsetBuffer = 0;
+
+        while (offsetResult < result.length) {
+            const nextOffsetBuffer = Math.round((offsetResult + 1) * sampleRateRatio);
+            let accum = 0;
+            let count = 0;
+            for (let i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
+                accum += buffer[i];
+                count++;
+            }
+            result[offsetResult] = count ? accum / count : 0;
+            offsetResult++;
+            offsetBuffer = nextOffsetBuffer;
+        }
+        return result;
+    };
+
+    const startAudioCapture = async () => {
+        if (!audioContext || audioContext.state === 'closed') {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: TARGET_SAMPLE_RATE });
+        }
+        await audioContext.resume().catch(() => {});
+
+        mediaStream = await requestMicrophoneStream();
+        sourceNode = audioContext.createMediaStreamSource(mediaStream);
+        processorNode = audioContext.createScriptProcessor(4096, 1, 1);
+        silentGainNode = audioContext.createGain();
+        silentGainNode.gain.value = 0;
+
+        processorNode.onaudioprocess = (event) => {
+            if (!sendingAudio || websocket?.readyState !== WebSocket.OPEN) {
+                return;
+            }
+            const inputBuffer = event.inputBuffer.getChannelData(0);
+            const downsampled = downsampleBuffer(inputBuffer, audioContext.sampleRate, TARGET_SAMPLE_RATE);
+            const pcm = floatTo16BitPCM(downsampled);
+            websocket.send(pcm.buffer);
+        };
+
+        sourceNode.connect(processorNode);
+        processorNode.connect(silentGainNode);
+        silentGainNode.connect(audioContext.destination);
+        audioPlaybackTime = audioContext.currentTime;
+    };
+
+    const stopAudioCapture = async () => {
+        sendingAudio = false;
+        if (websocket && websocket.readyState === WebSocket.OPEN) {
+            websocket.send(JSON.stringify({ type: 'stop_audio' }));
+        }
+
+        if (processorNode) {
+            processorNode.disconnect();
+            processorNode.onaudioprocess = null;
+            processorNode = null;
+        }
+        if (silentGainNode) {
+            silentGainNode.disconnect();
+            silentGainNode = null;
+        }
+        if (sourceNode) {
+            sourceNode.disconnect();
+            sourceNode = null;
+        }
+        if (mediaStream) {
+            mediaStream.getTracks().forEach((track) => track.stop());
+            mediaStream = null;
+        }
+    };
+
+    startBtn.addEventListener('click', async () => {
+        startBtn.disabled = true;
+        try {
+            await ensureWebsocket();
+            await startAudioCapture();
+            sendingAudio = true;
+            stopBtn.disabled = false;
+            statusEl.textContent = 'Hablando con Nova Sonic...';
+            log('Captura de audio iniciada');
+        } catch (error) {
+            log(`No se pudo iniciar la sesión: ${error.message || error}`);
+            statusEl.textContent = 'Error al iniciar sesión';
+            startBtn.disabled = false;
+        }
+    });
+
+    stopBtn.addEventListener('click', async () => {
+        stopBtn.disabled = true;
+        startBtn.disabled = false;
+        await stopAudioCapture();
+        statusEl.textContent = 'Captura detenida. Puedes iniciar nuevamente.';
+        log('Captura de audio detenida');
+    });
+
+    window.addEventListener('beforeunload', () => {
+        if (websocket && websocket.readyState === WebSocket.OPEN) {
+            websocket.send(JSON.stringify({ type: 'close_session' }));
+            websocket.close();
+        }
+    });
+})();
+</script>
+</body>
+</html>
