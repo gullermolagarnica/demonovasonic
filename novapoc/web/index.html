@@ -4,30 +4,31 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Nova Sonic Web</title>
-    <style>
+<style>
         :root {
-            color-scheme: light dark;
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
         body {
             margin: 0;
-            background: radial-gradient(circle at top, #2a3f6d 0%, #101929 45%, #05070c 100%);
+            background-color: #3B3A3A;
             min-height: 100vh;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            color: #f5f7ff;
+            gap: 16px;
         }
         main {
             width: min(900px, 94vw);
-            background: rgba(9, 17, 31, 0.86);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 18px;
-            padding: 28px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
-            backdrop-filter: blur(12px);
+            background-color: #3B3A3A;
+            border: 3px solid #48FF00;
+            border-radius: 20px;
+            padding: 36px 32px;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+            color: #FFFFFF;
         }
         header {
+            width: 100%;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -35,13 +36,15 @@
             flex-wrap: wrap;
         }
         h1 {
-            font-size: 1.6rem;
+            font-size: 1.7rem;
             margin: 0;
             letter-spacing: 0.04em;
+            color: #FFFFFF;
         }
         #status {
-            font-size: 0.95rem;
+            font-size: 1rem;
             opacity: 0.9;
+            color: #FFFFFF;
         }
         .controls {
             margin: 24px 0 12px 0;
@@ -52,25 +55,19 @@
         button {
             border: none;
             border-radius: 999px;
-            padding: 12px 24px;
+            padding: 12px 28px;
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
             transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
-            color: #0f172a;
+            color: #FFFFFF;
+            background-color: #48FF00;
+            box-shadow: 0 10px 24px rgba(72, 255, 0, 0.35);
         }
         button:disabled {
             opacity: 0.55;
             cursor: not-allowed;
             box-shadow: none;
-        }
-        #startBtn {
-            background: linear-gradient(135deg, #62f7d2, #45b1ff);
-            box-shadow: 0 10px 25px rgba(68, 199, 255, 0.35);
-        }
-        #stopBtn {
-            background: linear-gradient(135deg, #ff6b6b, #f06595);
-            color: white;
         }
         button:not(:disabled):hover {
             transform: translateY(-2px);
@@ -79,48 +76,84 @@
             margin-top: 18px;
             max-height: 420px;
             overflow-y: auto;
-            padding-right: 6px;
+            padding: 16px;
+            background: rgba(72, 255, 0, 0.2);
+            border-radius: 16px;
         }
         .msg {
             padding: 14px 16px;
             margin-bottom: 12px;
             border-radius: 12px;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(72, 255, 0, 0.12);
+            border: 1px solid rgba(72, 255, 0, 0.35);
             line-height: 1.45;
             white-space: pre-wrap;
+            color: #FFFFFF;
         }
         .msg.assistant {
-            background: rgba(78, 168, 255, 0.18);
-            border-color: rgba(100, 194, 255, 0.25);
+            background: rgba(72, 255, 0, 0.22);
+            border-color: rgba(72, 255, 0, 0.5);
+            color: #FFFFFF;
         }
         .msg.user {
-            background: rgba(98, 247, 210, 0.16);
-            border-color: rgba(98, 247, 210, 0.25);
+            background: rgba(72, 255, 0, 0.18);
+            border-color: rgba(72, 255, 0, 0.4);
+            color: #FFFFFF;
         }
         .msg.tool {
             font-size: 0.95rem;
             font-style: italic;
             opacity: 0.9;
         }
+        #logWrapper {
+            margin-top: 28px;
+            border-top: 1px solid rgba(72, 255, 0, 0.35);
+            padding-top: 12px;
+            color: #FFFFFF;
+        }
+        #logWrapper summary {
+            cursor: pointer;
+            font-weight: 600;
+            color: #FFFFFF;
+            list-style: none;
+        }
+        #logWrapper summary::-webkit-details-marker {
+            display: none;
+        }
+        #logWrapper summary::before {
+            content: '▸';
+            display: inline-block;
+            margin-right: 8px;
+            transition: transform 0.2s ease;
+        }
+        #logWrapper[open] summary::before {
+            transform: rotate(90deg);
+        }
         #logArea {
-            margin-top: 22px;
+            margin-top: 18px;
             font-size: 0.85rem;
-            opacity: 0.75;
+            opacity: 0.85;
             max-height: 160px;
             overflow-y: auto;
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
-            padding-top: 12px;
+            padding-top: 8px;
+            color: #FFFFFF;
         }
         .log-entry {
             margin-bottom: 6px;
         }
         a {
-            color: inherit;
+            color: #FFFFFF;
+        }
+        .hero-image {
+            display: block;
+            width: min(320px, 55vw);
+            height: auto;
+            margin: 0 auto 22px auto;
         }
     </style>
 </head>
 <body>
+    <img src="/static/roomie.png" alt="Roomie" class="hero-image" />
 <main>
     <header>
         <h1>Nova Sonic Web</h1>

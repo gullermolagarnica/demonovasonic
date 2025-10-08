@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional, Tuple
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.websockets import WebSocketState
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -22,6 +23,7 @@ except ImportError:  # pragma: no cover - fallback when executed directly
     from nova_sonic_full import BedrockStreamManager
 
 app = FastAPI()
+app.mount("/static", StaticFiles(directory=BASE_DIR / "web"), name="static")
 
 FRONTEND_PATH = BASE_DIR / "web" / "index.html"
 
