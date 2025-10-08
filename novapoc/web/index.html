@@ -133,7 +133,10 @@
     </div>
 
     <section id="conversation"></section>
-    <section id="logArea"></section>
+    <details id="logWrapper">
+        <summary>Ver registro de eventos</summary>
+        <section id="logArea"></section>
+    </details>
 </main>
 
 <script>
@@ -294,7 +297,11 @@
 
         if (event.textOutput) {
             const { content, role } = event.textOutput;
-            appendMessage(role?.toLowerCase?.() || 'assistant', content);
+            let displayText = content;
+            if (typeof content === 'string' && content.includes('{ "interrupted" : true }')) {
+                displayText = '[USUARIO INTERRUMPIO]';
+            }
+            appendMessage(role?.toLowerCase?.() || 'assistant', displayText);
         } else if (event.audioOutput) {
             playAudioChunk(event.audioOutput.content);
         } else if (event.toolUse) {

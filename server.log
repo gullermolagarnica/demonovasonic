@@ -1,0 +1,64 @@
+INFO:     Started server process [10141]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on https://127.0.0.1:8000 (Press CTRL+C to quit)
+Nova Sonic Web UI disponible en https://127.0.0.1:8000
+INFO:     127.0.0.1:57775 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57775 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57785 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57785 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57785 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57785 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57785 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57785 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     ('127.0.0.1', 57811) - "WebSocket /ws" [accepted]
+INFO:     connection open
+User: hola buenas tardes
+Assistant: Hola! Buenas tardes, cómo estás? En qué puedo ayudarte hoy?
+INFO:     127.0.0.1:57832 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     connection closed
+INFO:     127.0.0.1:57832 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57832 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/awscrt/http.py", line 426, in _on_body
+    self._on_body_cb(http_stream=self, chunk=chunk)
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/smithy_http/aio/crt.py", line 131, in on_body
+    future.set_result(chunk)
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/_base.py", line 544, in set_result
+    raise InvalidStateError('{}: {!r}'.format(self._state, self))
+concurrent.futures._base.InvalidStateError: CANCELLED: <Future at 0x11cbb1af0 state=cancelled>
+Treating Python exception as error 3(AWS_ERROR_UNKNOWN)
+INFO:     127.0.0.1:58197 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58197 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     ('127.0.0.1', 58199) - "WebSocket /ws" [accepted]
+INFO:     connection open
+User: hola qué tal
+Assistant: Hola, qué tal? Espero que estés teniendo un buen día.
+INFO:     127.0.0.1:58202 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+Assistant:  En qué puedo ayudarte hoy?
+User: eh pues no sé en qué te gustaría ayudarme
+Assistant: Bueno, puedo ayudarte con una variedad de cosas. Por ejemplo, puedo darte información sobre el clima, ayudarte a encontrar recetas, darte consejos sobre tecnología, o simplemente mantener una conversación amistosa.
+Error receiving response: Bedrock is unable to process your request.
+INFO:     127.0.0.1:58210 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     connection closed
+INFO:     127.0.0.1:58232 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58232 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     ('127.0.0.1', 58238) - "WebSocket /ws" [accepted]
+INFO:     connection open
+User: hola qué tal
+Assistant: Hola, qué tal? Espero que estés teniendo un buen día.
+INFO:     127.0.0.1:58257 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     Shutting down
+INFO:     connection closed
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [10141]
+Assistant:  En qué puedo ayudarte hoy?
+User: en qué te gusta ayudarme
+Assistant: Me gusta ayudarte en muchas cosas, desde encontrar información, hasta simplemente charlar y escucharte.
+User: ah ya sé ya sé ya sé ya sé
+Assistant: No te preocupes, estoy aquí para lo que necesites.
+User: ja ja ja ja ja ja ja ja
+Future exception was never retrieved
+future: <Future finished exception=AwsCrtError(name='AWS_ERROR_UNKNOWN', message='Unknown error.', code=3)>
+awscrt.exceptions.AwsCrtError: AWS_ERROR_UNKNOWN: Unknown error.
